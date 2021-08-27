@@ -1,0 +1,203 @@
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../src/generated/client-mongo"
+  previewFeatures = ["mongoDb"]
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_MONGO")
+}
+
+model BlockedUser {
+  id                                   String    @id @default(dbgenerated()) @map("_id") @db.String
+  createdAt                            DateTime? @default(now())
+  updatedAt                            DateTime? @default(now())
+  deletedAt                            DateTime?
+  userId                               String    
+  blockedUserId                        String    
+  User_BlockedUser_blockedUserIdToUser User      @relation("BlockedUser_blockedUserIdToUser", fields: [blockedUserId], references: [id])
+  User_BlockedUser_userIdToUser        User      @relation("BlockedUser_userIdToUser", fields: [userId], references: [id])
+
+  @@unique([userId, blockedUserId])
+}
+
+model Channel {
+  id            String       @id @default(dbgenerated()) @map("_id") @db.String
+  channelType   ChannelType
+  name          String?
+  lastMessageId String?
+  createdAt     DateTime?    @default(now())
+  updatedAt     DateTime?    @default(now())
+  deletedAt     DateTime?
+  Membership    Membership[]
+  Message       Message[]
+}
+
+model Friend {
+  id                         String    @id @default(dbgenerated()) @map("_id") @db.String
+  createdAt                  DateTime? @default(now())
+  updatedAt                  DateTime? @default(now())
+  deletedAt                  DateTime?
+  userId                     String    @db.String
+  friendId                   String    @db.String
+  User_Friend_friendIdToUser User      @relation("Friend_friendIdToUser", fields: [friendId], references: [id])
+  User_Friend_userIdToUser   User      @relation("Friend_userIdToUser", fields: [userId], references: [id])
+
+  @@unique([userId, friendId])
+}
+
+model Membership {
+  id             String         @id @default(dbgenerated()) @map("_id") @db.String
+  alertMode      AlertMode?     @default(sound)
+  membershipType MembershipType @default(member)
+  isVisible      Boolean        @default(true)
+  createdAt      DateTime?      @default(now())
+  updatedAt      DateTime?      @default(now())
+  userId         String         @db.String
+  channelId      String         @db.String
+  Channel        Channel        @relation(fields: [channelId], references: [id])
+  User           User           @relation(fields: [userId], references: [id])
+
+  @@unique([userId, channelId])
+  @@index([updatedAt], name: "Membership.updatedAt_index")
+}
+
+model Message {
+  id          String      @id @default(dbgenerated()) @map("_id") @db.String
+  messageType MessageType @default(text)
+  text        String?
+  createdAt   DateTime?   @default(now())
+  updatedAt   DateTime?   @default(now())
+  deletedAt   DateTime?
+  channelId   String      @db.String
+  senderId    String      @db.String
+  Channel     Channel     @relation(fields: [channelId], references: [id])
+  User        User        @relation(fields: [senderId], references: [id])
+  Reaction    Reaction[]
+  Reply       Reply[]
+}
+
+model Notification {
+  id        Int       @id @default(dbgenerated()) @map("_id") @db.Int
+  token     String    @unique
+  device    String?
+  os        String?
+  userId    String    @db.String
+  createdAt DateTime? @default(now())
+  User      User      @relation(fields: [userId], references: [id])
+}
+
+model Profile {
+  id       Int       @id @default(dbgenerated()) @map("_id") @db.Int
+  socialId String?
+  authType AuthType?
+  userId   String    @unique @db.String
+  User     User      @relation(fields: [userId], references: [id])
+}
+
+model Reaction {
+  id        Int     @id @default(dbgenerated()) @map("_id") @db.Int
+  value     String
+  userId    String  @db.String
+  messageId String  @db.String
+  replyId   Int
+  Message   Message @relation(fields: [messageId], references: [id])
+  Reply     Reply   @relation(fields: [replyId], references: [id])
+  User      User    @relation(fields: [userId], references: [id])
+}
+
+model Reply {
+  id          Int         @id @default(dbgenerated()) @map("_id") @db.Int
+  messageType MessageType @default(text)
+  text        String?
+  imageUrls   String[]
+  fileUrls    String[]
+  createdAt   DateTime?   @default(now())
+  updatedAt   DateTime?   @default(now())
+  deletedAt   DateTime?
+  senderId    String      @db.String
+  messageId   String      @db.String
+  Message     Message     @relation(fields: [messageId], references: [id])
+  User        User        @relation(fields: [senderId], references: [id])
+  Reaction    Reaction[]
+}
+
+model Report {
+  id                               String    @id @default(dbgenerated()) @map("_id") @db.String
+  report                           String
+  createdAt                        DateTime? @default(now())
+  updatedAt                        DateTime? @default(now())
+  deletedAt                        DateTime?
+  userId                           String    @db.String
+  reportedUserId                   String    @db.String
+  User_Report_reportedUserIdToUser User      @relation("Report_reportedUserIdToUser", fields: [reportedUserId], references: [id])
+  User_Report_userIdToUser         User      @relation("Report_userIdToUser", fields: [userId], references: [id])
+}
+
+model User {
+  id                                          String         @id @default(dbgenerated()) @map("_id") @db.String
+  email                                       String?        @unique
+  password                                    String?
+  name                                        String?
+  nickname                                    String?
+  thumbURL                                    String?
+  photoURL                                    String?
+  birthday                                    DateTime?
+  gender                                      Gender?
+  phone                                       String?
+  statusMessage                               String?
+  verified                                    Boolean?       @default(false)
+  lastSignedIn                                DateTime?
+  isOnline                                    Boolean?       @default(false)
+  createdAt                                   DateTime?      @default(now())
+  updatedAt                                   DateTime?      @default(now())
+  deletedAt                                   DateTime?
+  BlockedUser_BlockedUser_blockedUserIdToUser BlockedUser[]  @relation("BlockedUser_blockedUserIdToUser")
+  BlockedUser_BlockedUser_userIdToUser        BlockedUser[]  @relation("BlockedUser_userIdToUser")
+  Friend_Friend_friendIdToUser                Friend[]       @relation("Friend_friendIdToUser")
+  Friend_Friend_userIdToUser                  Friend[]       @relation("Friend_userIdToUser")
+  Membership                                  Membership[]
+  Message                                     Message[]
+  Notification                                Notification[]
+  Profile                                     Profile?
+  Reaction                                    Reaction[]
+  Reply                                       Reply[]
+  Report_Report_reportedUserIdToUser          Report[]       @relation("Report_reportedUserIdToUser")
+  Report_Report_userIdToUser                  Report[]       @relation("Report_userIdToUser")
+}
+
+enum AlertMode {
+  sound
+  vibrate
+  silent
+}
+
+enum AuthType {
+  email
+  facebook
+  google
+  apple
+}
+
+enum ChannelType {
+  private
+  public
+}
+
+enum Gender {
+  male
+  female
+}
+
+enum MembershipType {
+  owner
+  admin
+  member
+}
+
+enum MessageType {
+  text
+  photo
+  file
+}
